@@ -366,7 +366,7 @@ async function fetchWingbits() {
       states.push([
         icao24,
         callsign,
-        f.c || f.co || f.originCountry || '',
+        f.co || f.originCountry || '',
         null,
         raMs / 1000,
         f.lo || f.longitude || f.lon || f.lng,
@@ -385,25 +385,44 @@ async function fetchWingbits() {
   return states;
 }
 
-// ── Fetch All States (3-tier fallback) ─────────────────────
+// ── Fetch All States (Wingbits first, OpenSky supplements) ─
 async function fetchAllStates() {
   const seenIds = new Set();
   const allStates = [];
   let source = 'none';
 
+  // Tier 1: Wingbits — no proxy needed, fast, reliable
+  try {
+    const wbStates = await fetchWingbits();
+    for (const state of wbStates) {
+      const icao24 = state[0];
+      if (seenIds.has(icao24)) continue;
+      seenIds.add(icao24);
+      allStates.push(state);
+    }
+    if (wbStates.length > 0) {
+      source = 'wingbits';
+      console.log(`  [Wingbits] ${wbStates.length} unique aircraft loaded`);
+    }
+  } catch (e) {
+    console.warn(`  [Wingbits] ${e.message}`);
+  }
+
+  // Tier 2: OpenSky (auth via proxy) — supplements with aircraft Wingbits may miss
   for (const region of QUERY_REGIONS) {
     let states = null;
 
     try {
       states = await fetchOpenSkyAuthenticated(region);
       if (states && states.length > 0) {
-        source = 'opensky-auth';
+        if (source === 'none') source = 'opensky-auth';
         console.log(`  [OpenSky Auth] ${region.name}: ${states.length} states`);
       }
     } catch (e) {
       console.warn(`  [OpenSky Auth] ${region.name}: ${redactProxy(e.message)}`);
     }
 
+    // Tier 3: OpenSky anonymous (via proxy) — last resort
     if (!states || states.length === 0) {
       try {
         states = await fetchOpenSkyAnonymous(region);
@@ -417,33 +436,16 @@ async function fetchAllStates() {
     }
 
     if (states) {
+      let added = 0;
       for (const state of states) {
         const icao24 = state[0];
         if (seenIds.has(icao24)) continue;
         seenIds.add(icao24);
         allStates.push(state);
+        added++;
       }
+      if (added > 0) console.log(`  [OpenSky] +${added} new from ${region.name} (total: ${allStates.length})`);
     }
-  }
-
-  try {
-    const wbStates = await fetchWingbits();
-    let added = 0;
-    for (const state of wbStates) {
-      const icao24 = state[0];
-      if (seenIds.has(icao24)) continue;
-      seenIds.add(icao24);
-      allStates.push(state);
-      added++;
-    }
-    if (added > 0) {
-      console.log(`  [Wingbits] +${added} additional aircraft (total raw: ${allStates.length})`);
-      if (source === 'none') source = 'wingbits';
-    } else if (wbStates.length > 0) {
-      console.log(`  [Wingbits] ${wbStates.length} states (all dupes of OpenSky)`);
-    }
-  } catch (e) {
-    console.warn(`  [Wingbits] ${e.message}`);
   }
 
   return { allStates, source };
