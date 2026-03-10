@@ -2,6 +2,8 @@ const IMAGERY_PREVIEW_HOSTS = [
   'sentinel-s1-l1c.s3.amazonaws.com',
   'sentinel-cogs.s3.us-west-2.amazonaws.com',
   'earth-search.aws.element84.com',
+  'usgs-landsat.s3.amazonaws.com',
+  'landsatlook.usgs.gov',
 ];
 
 export function isAllowedPreviewUrl(url: string | undefined): boolean {

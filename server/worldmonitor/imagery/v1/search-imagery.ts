@@ -8,7 +8,7 @@ import { cachedFetchJson } from '../../../_shared/redis';
 import { CHROME_UA } from '../../../_shared/constants';
 
 const STAC_SEARCH = 'https://earth-search.aws.element84.com/v1/search';
-const COLLECTIONS = ['sentinel-2-l2a', 'sentinel-1-grd'];
+const COLLECTIONS = ['sentinel-2-l2a', 'sentinel-2-c1-l2a', 'sentinel-1-grd', 'landsat-c2-l2'];
 const CACHE_TTL = 3600;
 
 function fnv1a(str: string): number {
@@ -74,19 +74,24 @@ function s3ToHttps(url: string): string {
 
 function mapFeature(f: StacFeature): ImageryScene {
   const props = f.properties;
-  const thumbnail = s3ToHttps(
-    f.assets?.['thumbnail']?.href
+  const linkThumb = f.links?.find(l => l.rel === 'thumbnail')?.href ?? '';
+  const assetThumb = f.assets?.['thumbnail']?.href
     ?? f.assets?.['overview']?.href
-    ?? f.links?.find(l => l.rel === 'thumbnail')?.href
-    ?? '',
-  );
+    ?? f.assets?.['reduced_resolution_browse']?.href
+    ?? '';
+  // Prefer links thumbnail (public URL) over s3:// assets (may be requester-pays)
+  const rawThumb = assetThumb.startsWith('s3://') ? (linkThumb || s3ToHttps(assetThumb)) : (assetThumb || linkThumb);
+  const thumbnail = rawThumb.startsWith('s3://') ? s3ToHttps(rawThumb) : rawThumb;
   const asset = f.assets?.['visual']?.href
+    ?? f.assets?.['rendered_preview']?.href
     ?? f.assets?.['vv']?.href
     ?? f.assets?.['vh']?.href
     ?? '';
   const satellite = props.constellation ?? props.platform ?? 'unknown';
-  const mode = props['sar:instrument_mode'] ?? (satellite.includes('sentinel-2') ? 'MSI' : '');
-  const resolution = props.gsd ?? props['sar:resolution_range'] ?? 10;
+  const satLower = satellite.toLowerCase();
+  const mode = props['sar:instrument_mode']
+    ?? (satLower.includes('sentinel-2') ? 'MSI' : (satLower.includes('landsat') ? 'OLI/TIRS' : ''));
+  const resolution = props.gsd ?? props['sar:resolution_range'] ?? (satLower.includes('landsat') ? 30 : 10);
 
   return {
     id: f.id,
@@ -117,7 +122,7 @@ export async function searchImagery(
   const snappedBbox = parsedBbox.map(v => Math.round(v)).join(',');
   const nowHour = new Date();
   nowHour.setMinutes(0, 0, 0);
-  const weekAgo = new Date(nowHour.getTime() - 7 * 24 * 60 * 60 * 1000);
+  const weekAgo = new Date(nowHour.getTime() - 14 * 24 * 60 * 60 * 1000);
   const defaultDatetime = `${weekAgo.toISOString().split('.')[0]}Z/${nowHour.toISOString().split('.')[0]}Z`;
   const datetime = req.datetime || defaultDatetime;
   const key = cacheKey(snappedBbox, datetime, req.source, limit);
@@ -131,7 +136,8 @@ export async function searchImagery(
         const LEGACY_SOURCE_MAP: Record<string, string[]> = {
           capella: COLLECTIONS,
           'sentinel-1': ['sentinel-1-grd'],
-          'sentinel-2': ['sentinel-2-l2a'],
+          'sentinel-2': ['sentinel-2-l2a', 'sentinel-2-c1-l2a'],
+          landsat: ['landsat-c2-l2'],
         };
         let collections = COLLECTIONS;
         if (req.source) {
