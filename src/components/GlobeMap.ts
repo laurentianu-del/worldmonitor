@@ -729,21 +729,21 @@ export class GlobeMap {
       .polygonCapColor((d: GlobePolygon) => {
         if (d._kind === 'cii') return GlobeMap.CII_GLOBE_COLORS[d.level!] ?? 'rgba(0,0,0,0)';
         if (d._kind === 'conflict') return GlobeMap.CONFLICT_CAP[d.intensity!] ?? GlobeMap.CONFLICT_CAP.low;
-        if (d._kind === 'imageryFootprint') return 'rgba(0,180,255,0.08)';
+        if (d._kind === 'imageryFootprint') return 'rgba(0,180,255,0.01)';
         if (d._kind === 'forecastCone') return 'rgba(255,140,60,0.2)';
         return 'rgba(255,60,60,0.15)';
       })
       .polygonSideColor((d: GlobePolygon) => {
         if (d._kind === 'cii') return 'rgba(0,0,0,0)';
         if (d._kind === 'conflict') return GlobeMap.CONFLICT_SIDE[d.intensity!] ?? GlobeMap.CONFLICT_SIDE.low;
-        if (d._kind === 'imageryFootprint') return 'rgba(0,180,255,0.04)';
+        if (d._kind === 'imageryFootprint') return 'rgba(0,0,0,0)';
         if (d._kind === 'forecastCone') return 'rgba(255,140,60,0.1)';
         return 'rgba(255,60,60,0.08)';
       })
       .polygonStrokeColor((d: GlobePolygon) => {
         if (d._kind === 'cii') return 'rgba(80,80,80,0.3)';
         if (d._kind === 'conflict') return GlobeMap.CONFLICT_STROKE[d.intensity!] ?? GlobeMap.CONFLICT_STROKE.low;
-        if (d._kind === 'imageryFootprint') return '#00b4ff';
+        if (d._kind === 'imageryFootprint') return 'rgba(0,180,255,0.6)';
         if (d._kind === 'forecastCone') return 'rgba(255,140,60,0.5)';
         return '#ff4444';
       })
