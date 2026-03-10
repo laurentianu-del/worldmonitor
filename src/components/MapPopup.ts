@@ -289,6 +289,7 @@ export class MapPopup {
 
     this.popup.style.left = `${left}px`;
     this.popup.style.top = `${top}px`;
+    this.popup.style.maxHeight = `${window.innerHeight - top - bottomBuffer}px`;
   }
 
   private handleOutsideClick = (e: Event) => {
