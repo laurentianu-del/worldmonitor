@@ -771,11 +771,16 @@ export class GlobeMap {
           }
           if (isAllowedPreviewUrl(d.previewUrl)) {
             const safeHref = escapeHtml(new URL(d.previewUrl!).href);
-            label += `<br><img src="${safeHref}" referrerpolicy="no-referrer" style="max-width:180px;max-height:120px;margin-top:4px;border-radius:4px;" class="imagery-preview">`;
+            label += `<br><img src="${safeHref}" referrerpolicy="no-referrer" style="max-width:280px;max-height:180px;margin-top:6px;border-radius:4px;" class="imagery-preview">`;
           }
+          label += `<br><span style="opacity:.4;font-size:10px;">Click for details</span>`;
           return label;
         }
         return escapeHtml(d.name);
+      })
+      .onPolygonClick((poly: object, _ev: MouseEvent) => {
+        const d = poly as GlobePolygon;
+        if (d._kind === 'imageryFootprint') this.showImageryPopup(d);
       });
 
     this.globe = globe;
@@ -1270,12 +1275,17 @@ export class GlobeMap {
       }
       if (isAllowedPreviewUrl(d.previewUrl)) {
         const safeHref = escapeHtml(new URL(d.previewUrl!).href);
-        html += `<br><img src="${safeHref}" referrerpolicy="no-referrer" style="max-width:180px;max-height:120px;margin-top:4px;border-radius:4px;" class="imagery-preview">`;
+        html += `<br><img src="${safeHref}" referrerpolicy="no-referrer" style="max-width:300px;max-height:200px;margin-top:6px;border-radius:4px;cursor:pointer;" class="imagery-preview" data-full-url="${safeHref}">`;
+        html += `<br><span style="opacity:.4;font-size:10px;">Click image to enlarge</span>`;
       }
     }
     el.innerHTML = `<div style="padding-right:16px;position:relative;">${closeBtn}${html}</div>`;
-    if (d._kind === 'satellite') el.style.maxWidth = '300px';
+    if (d._kind === 'satellite' || d._kind === 'imageryScene') el.style.maxWidth = '340px';
     el.querySelector('button')?.addEventListener('click', () => this.hideTooltip());
+    el.querySelector('.imagery-preview')?.addEventListener('click', (e) => {
+      const url = (e.target as HTMLElement).getAttribute('data-full-url');
+      if (url) this.showImageryLightbox(url, (d as any).satellite ?? '', (d as any).datetime ?? '');
+    });
     el.addEventListener('mouseenter', () => {
       if (this.tooltipHideTimer) { clearTimeout(this.tooltipHideTimer); this.tooltipHideTimer = null; }
     });
@@ -1309,6 +1319,57 @@ export class GlobeMap {
     if (this.tooltipHideTimer) { clearTimeout(this.tooltipHideTimer); this.tooltipHideTimer = null; }
     this.tooltipEl?.remove();
     this.tooltipEl = null;
+  }
+
+  private showImageryPopup(d: GlobePolygon): void {
+    this.hideTooltip();
+    const el = document.createElement('div');
+    el.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(10,12,16,0.97);border:1px solid rgba(0,180,255,0.3);padding:16px;border-radius:8px;font-size:12px;font-family:monospace;color:#d4d4d4;max-width:420px;z-index:1001;pointer-events:auto;line-height:1.6;box-shadow:0 12px 40px rgba(0,0,0,0.7);';
+    const esc = escapeHtml;
+    let html = `<button style="position:absolute;top:8px;right:8px;background:none;border:none;color:#888;cursor:pointer;font-size:18px;line-height:1;padding:4px 6px;" aria-label="Close">\u00D7</button>`;
+    html += `<div style="color:#00b4ff;font-weight:bold;font-size:14px;margin-bottom:8px;">&#128752; ${esc(d.satellite ?? '')}</div>`;
+    if (d.datetime) html += `<div style="opacity:.7;margin-bottom:4px;">${esc(d.datetime)}</div>`;
+    if (d.resolutionM != null || d.mode) {
+      const parts: string[] = [];
+      if (d.resolutionM != null) parts.push(`${d.resolutionM}m resolution`);
+      if (d.mode) parts.push(esc(d.mode));
+      html += `<div style="opacity:.5;margin-bottom:8px;">${parts.join(' \u00B7 ')}</div>`;
+    }
+    if (isAllowedPreviewUrl(d.previewUrl)) {
+      const safeHref = escapeHtml(new URL(d.previewUrl!).href);
+      html += `<img src="${safeHref}" referrerpolicy="no-referrer" style="width:100%;max-height:280px;object-fit:contain;border-radius:4px;cursor:pointer;margin-top:4px;" class="imagery-preview" data-full-url="${safeHref}">`;
+      html += `<div style="opacity:.4;font-size:10px;margin-top:4px;text-align:center;">Click image to enlarge</div>`;
+    }
+    el.innerHTML = html;
+    el.querySelector('button')?.addEventListener('click', () => el.remove());
+    el.querySelector('.imagery-preview')?.addEventListener('click', (e) => {
+      const url = (e.target as HTMLElement).getAttribute('data-full-url');
+      if (url) { el.remove(); this.showImageryLightbox(url, d.satellite ?? '', d.datetime ?? ''); }
+    });
+    document.addEventListener('keydown', function handler(e: KeyboardEvent) {
+      if (e.key === 'Escape') { el.remove(); document.removeEventListener('keydown', handler); }
+    });
+    document.body.appendChild(el);
+  }
+
+  private showImageryLightbox(url: string, satellite: string, datetime: string): void {
+    const overlay = document.createElement('div');
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:10001;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:zoom-out;';
+    const caption = document.createElement('div');
+    caption.style.cssText = 'color:#d4d4d4;font-family:monospace;font-size:13px;margin-bottom:12px;text-align:center;';
+    caption.textContent = `${satellite} \u2022 ${datetime}`;
+    const img = document.createElement('img');
+    img.src = url;
+    img.referrerPolicy = 'no-referrer';
+    img.style.cssText = 'max-width:90vw;max-height:80vh;object-fit:contain;border-radius:6px;box-shadow:0 8px 32px rgba(0,0,0,0.6);cursor:default;';
+    img.addEventListener('click', (e) => e.stopPropagation());
+    overlay.appendChild(caption);
+    overlay.appendChild(img);
+    overlay.addEventListener('click', () => overlay.remove());
+    document.addEventListener('keydown', function handler(e: KeyboardEvent) {
+      if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', handler); }
+    });
+    document.body.appendChild(overlay);
   }
 
   // ─── Overlay UI: zoom controls & layer panel ─────────────────────────────
@@ -2163,7 +2224,7 @@ export class GlobeMap {
       const dLon = Math.abs(center.lon - this.lastImageryCenter.lon);
       if (dLat < 2 && dLon < 2) return;
     }
-    const R = 5;
+    const R = 15;
     const south = Math.max(-90, center.lat - R);
     const north = Math.min(90, center.lat + R);
     const west = Math.max(-180, center.lon - R);
@@ -2172,7 +2233,7 @@ export class GlobeMap {
     const thisVersion = ++this.imageryFetchVersion;
     try {
       const { fetchImageryScenes } = await import('@/services/imagery');
-      const scenes = await fetchImageryScenes({ bbox, limit: 20 });
+      const scenes = await fetchImageryScenes({ bbox, limit: 50 });
       if (thisVersion !== this.imageryFetchVersion) return;
       this.setImageryScenes(scenes);
       this.lastImageryCenter = { lat: center.lat, lon: center.lon };
