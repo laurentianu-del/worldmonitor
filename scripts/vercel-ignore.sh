@@ -1,6 +1,13 @@
 #!/bin/bash
 # Vercel Ignored Build Step: exit 0 = skip, exit 1 = build
 # Only build when web-relevant files change. Skip desktop, docs, scripts, CI, etc.
+
+# Always build production (main branch)
+[ "$VERCEL_GIT_COMMIT_REF" = "main" ] && exit 1
+
+# Skip preview deploys that aren't tied to a pull request
+[ -z "$VERCEL_GIT_PULL_REQUEST_ID" ] && exit 0
+
 [ -z "$VERCEL_GIT_PREVIOUS_SHA" ] && exit 1
 git cat-file -e "$VERCEL_GIT_PREVIOUS_SHA" 2>/dev/null || exit 1
 
