@@ -98,8 +98,18 @@ export const economicAdapter: DomainAdapter = {
     if (types.has('sanctions_news')) {
       const labels = cluster.filter(s => s.type === 'sanctions_news').map(s => s.label);
       const countries = extractMentionedEntities(labels);
-      const qualifier = countries || capitalize(entity) || '';
-      return qualifier ? `${qualifier} sanctions activity` : 'Sanctions activity';
+      const qualifier = countries || displayEntity(entity) || '';
+      const sanctionsBase = qualifier ? `${qualifier} sanctions activity` : 'Sanctions activity';
+      if (types.has('market_move')) {
+        const movers = cluster.filter(s => s.type === 'market_move');
+        const moverNames = movers
+          .map(s => (s.rawData as { display?: string; symbol?: string })?.display
+            ?? (s.rawData as { symbol?: string })?.symbol
+            ?? s.label.split(' ')[0])
+          .slice(0, 2);
+        return `${sanctionsBase} + ${moverNames.join('/')} disruption`;
+      }
+      return sanctionsBase;
     }
 
     if (types.has('market_move')) {
@@ -112,7 +122,8 @@ export const economicAdapter: DomainAdapter = {
       return `Market disruption: ${names.join('/')}`;
     }
 
-    return entity ? `Economic convergence: ${capitalize(entity)}` : 'Economic convergence detected';
+    const fallbackName = displayEntity(entity);
+    return fallbackName ? `Economic convergence: ${fallbackName}` : 'Economic convergence detected';
   },
 };
 
@@ -126,7 +137,13 @@ function extractMentionedEntities(labels: string[]): string {
   return '';
 }
 
-function capitalize(s?: string): string {
-  if (!s) return '';
-  return s.charAt(0).toUpperCase() + s.slice(1);
+const GENERIC_ENTITY_KEYS = new Set([
+  'sanctions', 'trade', 'tariff', 'commodity', 'currency', 'energy',
+  'embargo', 'semiconductor', 'crypto', 'inflation',
+]);
+
+function displayEntity(key?: string): string {
+  if (!key) return '';
+  if (GENERIC_ENTITY_KEYS.has(key)) return '';
+  return key.charAt(0).toUpperCase() + key.slice(1);
 }
