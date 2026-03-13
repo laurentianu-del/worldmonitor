@@ -73,6 +73,15 @@ describe('escalation adapter — country normalization structure', () => {
     );
   });
 
+  it('nameToCountryCode runs before the 2-char fast path', () => {
+    const fnBody = src.slice(src.indexOf('function normalizeToCode'), src.indexOf('const ESCALATION_KEYWORDS'));
+    const nameIdx = fnBody.indexOf('nameToCountryCode');
+    const twoCharIdx = fnBody.indexOf("trimmed.length === 2");
+    assert.ok(nameIdx > 0, 'normalizeToCode must call nameToCountryCode');
+    assert.ok(twoCharIdx > 0, 'normalizeToCode must have 2-char fast path');
+    assert.ok(nameIdx < twoCharIdx, 'nameToCountryCode must run BEFORE the 2-char fast path to resolve aliases like UK->GB');
+  });
+
   it('imports nameToCountryCode and getCountryNameByCode from country-geometry', () => {
     assert.match(src, /nameToCountryCode/, 'must import nameToCountryCode');
     assert.match(src, /getCountryNameByCode/, 'must import getCountryNameByCode');
@@ -84,20 +93,34 @@ describe('escalation adapter — country normalization structure', () => {
 // 2. Behavioral tests: adapter-level with mocked geometry
 // ============================================================
 
-const IRAN_GEOJSON = {
+const MOCK_GEOJSON = {
   type: 'FeatureCollection',
-  features: [{
-    type: 'Feature',
-    properties: {
-      name: 'Iran',
-      'ISO3166-1-Alpha-2': 'IR',
-      'ISO3166-1-Alpha-3': 'IRN',
+  features: [
+    {
+      type: 'Feature',
+      properties: {
+        name: 'Iran',
+        'ISO3166-1-Alpha-2': 'IR',
+        'ISO3166-1-Alpha-3': 'IRN',
+      },
+      geometry: {
+        type: 'Polygon',
+        coordinates: [[[44, 25], [63, 25], [63, 40], [44, 40], [44, 25]]],
+      },
     },
-    geometry: {
-      type: 'Polygon',
-      coordinates: [[[44, 25], [63, 25], [63, 40], [44, 40], [44, 25]]],
+    {
+      type: 'Feature',
+      properties: {
+        name: 'United Kingdom',
+        'ISO3166-1-Alpha-2': 'GB',
+        'ISO3166-1-Alpha-3': 'GBR',
+      },
+      geometry: {
+        type: 'Polygon',
+        coordinates: [[[-8, 49], [2, 49], [2, 61], [-8, 61], [-8, 49]]],
+      },
     },
-  }],
+  ],
 };
 
 const originalFetch = globalThis.fetch;
@@ -107,7 +130,7 @@ describe('escalation adapter — behavioral country normalization', () => {
     mock.method(globalThis, 'fetch', (url: string | URL | Request, init?: RequestInit) => {
       const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.href : url.url;
       if (urlStr.includes('countries.geojson')) {
-        return Promise.resolve(new Response(JSON.stringify(IRAN_GEOJSON), {
+        return Promise.resolve(new Response(JSON.stringify(MOCK_GEOJSON), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
         }));
@@ -197,5 +220,34 @@ describe('escalation adapter — behavioral country normalization', () => {
     const nonIrSignals = signals.filter(s => s.country && s.country !== 'IR');
     assert.ok(iranSignals.length >= 2, `expected at least 2 signals with country "IR", got ${iranSignals.length}`);
     assert.equal(nonIrSignals.length, 0, `no signals should have country other than "IR", found: ${nonIrSignals.map(s => s.country)}`);
+  });
+
+  it('two-letter alias "UK" normalizes to canonical "GB" via nameToCountryCode', async () => {
+    const { escalationAdapter } = await import('@/services/correlation-engine/adapters/escalation');
+    const now = new Date();
+    const ctx = {
+      intelligenceCache: {
+        protests: {
+          events: [{
+            country: 'UK',
+            severity: 'medium',
+            lat: 51.5,
+            lon: -0.1,
+            time: now,
+            eventType: 'protest',
+            title: 'Protest in London',
+          }],
+        },
+        outages: [],
+      },
+      latestClusters: [],
+    } as any;
+
+    const signals = escalationAdapter.collectSignals(ctx);
+    const ukSignals = signals.filter(s => s.type === 'conflict_event');
+    assert.ok(ukSignals.length > 0, 'should produce at least one conflict signal');
+    for (const s of ukSignals) {
+      assert.equal(s.country, 'GB', `"UK" alias should normalize to "GB", got "${s.country}"`);
+    }
   });
 });
