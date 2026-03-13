@@ -11,7 +11,7 @@
  * before pushing signals. generateTitle() resolves ISO2 back to full names.
  */
 
-import { describe, it } from 'node:test';
+import { describe, it, before, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -77,5 +77,125 @@ describe('escalation adapter — country normalization structure', () => {
     assert.match(src, /nameToCountryCode/, 'must import nameToCountryCode');
     assert.match(src, /getCountryNameByCode/, 'must import getCountryNameByCode');
     assert.match(src, /iso3ToIso2Code/, 'must import iso3ToIso2Code');
+  });
+});
+
+// ============================================================
+// 2. Behavioral tests: adapter-level with mocked geometry
+// ============================================================
+
+const IRAN_GEOJSON = {
+  type: 'FeatureCollection',
+  features: [{
+    type: 'Feature',
+    properties: {
+      name: 'Iran',
+      'ISO3166-1-Alpha-2': 'IR',
+      'ISO3166-1-Alpha-3': 'IRN',
+    },
+    geometry: {
+      type: 'Polygon',
+      coordinates: [[[44, 25], [63, 25], [63, 40], [44, 40], [44, 25]]],
+    },
+  }],
+};
+
+const originalFetch = globalThis.fetch;
+
+describe('escalation adapter — behavioral country normalization', () => {
+  before(async () => {
+    mock.method(globalThis, 'fetch', (url: string | URL | Request, init?: RequestInit) => {
+      const urlStr = typeof url === 'string' ? url : url instanceof URL ? url.href : url.url;
+      if (urlStr.includes('countries.geojson')) {
+        return Promise.resolve(new Response(JSON.stringify(IRAN_GEOJSON), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }));
+      }
+      if (urlStr.includes('country-boundary-overrides')) {
+        return Promise.resolve(new Response(JSON.stringify({ type: 'FeatureCollection', features: [] }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }));
+      }
+      return originalFetch(url, init);
+    });
+
+    const { preloadCountryGeometry } = await import('@/services/country-geometry');
+    await preloadCountryGeometry();
+  });
+
+  it('collectSignals normalizes "Iran" protest to ISO2 "IR"', async () => {
+    const { escalationAdapter } = await import('@/services/correlation-engine/adapters/escalation');
+    const now = new Date();
+    const ctx = {
+      intelligenceCache: {
+        protests: {
+          events: [{
+            country: 'Iran',
+            severity: 'high',
+            lat: 35.7,
+            lon: 51.4,
+            time: now,
+            eventType: 'protest',
+            title: 'Test protest in Tehran',
+          }],
+        },
+        outages: [],
+      },
+      latestClusters: [],
+    } as any;
+
+    const signals = escalationAdapter.collectSignals(ctx);
+    const conflictSignals = signals.filter(s => s.type === 'conflict_event');
+    assert.ok(conflictSignals.length > 0, 'should produce at least one conflict signal');
+    for (const s of conflictSignals) {
+      assert.equal(s.country, 'IR', `conflict signal country should be "IR", got "${s.country}"`);
+    }
+  });
+
+  it('generateTitle shows full name "Iran" not code "IR"', async () => {
+    const { escalationAdapter } = await import('@/services/correlation-engine/adapters/escalation');
+    const title = escalationAdapter.generateTitle([
+      { type: 'conflict_event', country: 'IR', source: 'signal-aggregator', severity: 80, timestamp: Date.now(), label: 'test' },
+      { type: 'news_severity', country: 'IR', source: 'analysis-core', severity: 65, timestamp: Date.now(), label: 'test' },
+    ] as any);
+    assert.ok(title.includes('Iran'), `title should contain "Iran", got "${title}"`);
+    assert.ok(title.includes('conflict'), `title should contain "conflict", got "${title}"`);
+    assert.ok(title.includes('news escalation'), `title should contain "news escalation", got "${title}"`);
+  });
+
+  it('protest "Iran" and news "IR" normalize to same code for clustering', async () => {
+    const { escalationAdapter } = await import('@/services/correlation-engine/adapters/escalation');
+    const now = new Date();
+    const ctx = {
+      intelligenceCache: {
+        protests: {
+          events: [{
+            country: 'Iran',
+            severity: 'high',
+            lat: 35.7,
+            lon: 51.4,
+            time: now,
+            eventType: 'armed clash',
+            title: 'Armed clash in Iran',
+          }],
+        },
+        outages: [],
+      },
+      latestClusters: [{
+        primaryTitle: 'Military escalation in Iran threatens region',
+        threat: { level: 'high' },
+        lastUpdated: now,
+        lat: 35.7,
+        lon: 51.4,
+      }],
+    } as any;
+
+    const signals = escalationAdapter.collectSignals(ctx);
+    const iranSignals = signals.filter(s => s.country === 'IR');
+    const nonIrSignals = signals.filter(s => s.country && s.country !== 'IR');
+    assert.ok(iranSignals.length >= 2, `expected at least 2 signals with country "IR", got ${iranSignals.length}`);
+    assert.equal(nonIrSignals.length, 0, `no signals should have country other than "IR", found: ${nonIrSignals.map(s => s.country)}`);
   });
 });
