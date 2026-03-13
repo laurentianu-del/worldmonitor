@@ -1870,7 +1870,7 @@ function fetchIcaoNotams() {
   return new Promise((resolve) => {
     if (!ICAO_API_KEY) return resolve([]);
     const locations = NOTAM_MONITORED_ICAO.join(',');
-    const apiUrl = `https://dataservices.icao.int/api/notams-realtime-list?api_key=${ICAO_API_KEY}&format=json&locations=${encodeURIComponent(locations)}`;
+    const apiUrl = `https://dataservices.icao.int/api/notams-realtime-list?api_key=${ICAO_API_KEY}&format=json&locations=${locations}`;
     const req = https.get(apiUrl, {
       headers: { 'User-Agent': CHROME_UA },
       timeout: 30000,
@@ -5778,7 +5778,7 @@ function handleNotamProxyRequest(req, res) {
     }, notamCache.data);
   }
 
-  const apiUrl = `https://dataservices.icao.int/api/notams-realtime-list?api_key=${ICAO_API_KEY}&format=json&locations=${encodeURIComponent(locations)}`;
+  const apiUrl = `https://dataservices.icao.int/api/notams-realtime-list?api_key=${ICAO_API_KEY}&format=json&locations=${locations}`;
 
   const request = https.get(apiUrl, {
     headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36' },
