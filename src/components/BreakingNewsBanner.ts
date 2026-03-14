@@ -28,6 +28,7 @@ export class BreakingNewsBanner {
   private boundOnVisibility: () => void;
   private boundOnResize: () => void;
   private dismissed = new Map<string, number>();
+  private highlightTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     this.container = document.createElement('div');
@@ -179,10 +180,14 @@ export class BreakingNewsBanner {
     const panel = document.querySelector(`[data-panel="${panelId}"]`);
     if (!panel) return;
     panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (this.highlightTimer) clearTimeout(this.highlightTimer);
     panel.classList.remove('search-highlight');
     void (panel as HTMLElement).offsetWidth;
     panel.classList.add('search-highlight');
-    setTimeout(() => panel.classList.remove('search-highlight'), 3100);
+    this.highlightTimer = setTimeout(() => {
+      panel.classList.remove('search-highlight');
+      this.highlightTimer = null;
+    }, 3100);
   }
 
   private createAlertElement(alert: BreakingAlert): HTMLElement {

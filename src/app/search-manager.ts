@@ -34,6 +34,7 @@ export class SearchManager implements AppModule {
   private ctx: AppContext;
   private callbacks: SearchManagerCallbacks;
   private boundKeydownHandler: ((e: KeyboardEvent) => void) | null = null;
+  private highlightTimers = new WeakMap<Element, ReturnType<typeof setTimeout>>();
 
   constructor(ctx: AppContext, callbacks: SearchManagerCallbacks) {
     this.ctx = ctx;
@@ -496,10 +497,7 @@ export class SearchManager implements AppModule {
     const panel = document.querySelector(`[data-panel="${panelId}"]`);
     if (panel) {
       panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      panel.classList.remove('search-highlight');
-      void (panel as HTMLElement).offsetWidth;
-      panel.classList.add('search-highlight');
-      setTimeout(() => panel.classList.remove('search-highlight'), 3100);
+      this.applyHighlight(panel);
     }
   }
 
@@ -508,12 +506,21 @@ export class SearchManager implements AppModule {
       const item = document.querySelector(`[data-news-id="${CSS.escape(itemId)}"]`);
       if (item) {
         item.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        item.classList.remove('search-highlight');
-        void (item as HTMLElement).offsetWidth;
-        item.classList.add('search-highlight');
-        setTimeout(() => item.classList.remove('search-highlight'), 3100);
+        this.applyHighlight(item);
       }
     }, 100);
+  }
+
+  private applyHighlight(el: Element): void {
+    const prev = this.highlightTimers.get(el);
+    if (prev) clearTimeout(prev);
+    el.classList.remove('search-highlight');
+    void (el as HTMLElement).offsetWidth;
+    el.classList.add('search-highlight');
+    this.highlightTimers.set(el, setTimeout(() => {
+      el.classList.remove('search-highlight');
+      this.highlightTimers.delete(el);
+    }, 3100));
   }
 
   updateSearchIndex(): void {

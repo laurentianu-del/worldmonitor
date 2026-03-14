@@ -5510,6 +5510,11 @@ export class DeckGLMap {
       this.renderRafId = null;
     }
 
+    if (this.countryPulseRaf !== null) {
+      cancelAnimationFrame(this.countryPulseRaf);
+      this.countryPulseRaf = null;
+    }
+
     if (this.moveTimeoutId) {
       clearTimeout(this.moveTimeoutId);
       this.moveTimeoutId = null;
