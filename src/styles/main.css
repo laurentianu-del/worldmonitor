@@ -7066,8 +7066,8 @@ a.prediction-link:hover {
 }
 
 .usni-intel-section {
-  background: rgba(var(--semantic-high-rgb), 0.05);
-  border: 1px solid rgba(var(--semantic-high-rgb), 0.2);
+  background: rgba(255, 136, 0, 0.05);
+  border: 1px solid rgba(255, 136, 0, 0.2);
   border-radius: 6px;
   padding: 10px;
   margin: 12px 0;
@@ -7103,7 +7103,7 @@ a.prediction-link:hover {
   font-size: 11px;
   line-height: 1.5;
   color: var(--text-secondary);
-  border-left: 2px solid rgba(var(--semantic-high-rgb), 0.3);
+  border-left: 2px solid rgba(255, 136, 0, 0.3);
   padding-left: 8px;
   margin: 4px 0;
 }
@@ -7156,9 +7156,14 @@ a.prediction-link:hover {
   text-transform: uppercase;
 }
 
-.popup-badge.usni-deployed { background: var(--semantic-high); color: white; }
-.popup-badge.usni-underway { background: var(--semantic-elevated); color: white; }
-.popup-badge.usni-in-port { background: var(--semantic-normal); color: white; }
+.popup-stat.warning .stat-value {
+  color: var(--semantic-high);
+  font-weight: 600;
+}
+
+.popup-stat.full-width {
+  grid-column: 1 / -1;
+}
 
 .popup-link {
   display: inline-block;

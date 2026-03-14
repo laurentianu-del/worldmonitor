@@ -2260,7 +2260,7 @@ export class MapPopup {
               <div class="vessel-history-list">
                 ${vessel.track.slice(-5).reverse().map((tp, i) => `
                   <div class="vessel-history-item">
-                    <span class="history-point">${this.formatCoord(tp[1], tp[0])}</span>
+                    <span class="history-point">${this.formatCoord(tp[0], tp[1])}</span>
                     ${i === 0 ? `<span class="history-tag">${t('popups.militaryVessel.lastReport')}</span>` : ''}
                   </div>
                 `).join('')}
