@@ -706,6 +706,7 @@ async function orefFetchAlerts() {
     const stderr = err.stderr ? err.stderr.toString().trim() : '';
     orefState.lastError = redactOrefError(stderr || err.message);
     console.warn('[Relay] OREF poll error:', orefState.lastError);
+    orefPreSerializeResponses();
   }
 }
 
