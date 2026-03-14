@@ -95,7 +95,8 @@ export class TelegramIntelPanel extends Panel {
     const timeAgo = formatTelegramTime(item.ts);
     const itemDate = new Date(item.ts).getTime();
     const isLive = !isNaN(itemDate) && (Date.now() - itemDate) < LIVE_THRESHOLD_MS;
-    const escaped = item.text
+    const raw = item.text || '';
+    const escaped = raw
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
@@ -106,7 +107,7 @@ export class TelegramIntelPanel extends Panel {
       h('div', { className: 'telegram-intel-item-header' },
         h('div', { className: 'telegram-intel-channel-wrapper' },
           h('span', { className: 'telegram-intel-channel' }, item.channelTitle || item.channel),
-          isLive ? h('span', { className: 'live-indicator' }, 'LIVE') : null,
+          isLive ? h('span', { className: 'live-indicator' }, t('components.telegramIntel.live')) : null,
         ),
         h('div', { className: 'telegram-intel-meta' },
           h('span', { className: 'telegram-intel-topic' }, item.topic),
