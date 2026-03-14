@@ -5378,6 +5378,10 @@ export class DeckGLMap {
       const t = (now - start) / duration;
       if (t >= 1) {
         this.countryPulseRaf = null;
+        try {
+          map.setPaintProperty('country-highlight-fill', 'fill-opacity', 0.12);
+          map.setPaintProperty('country-highlight-border', 'line-opacity', 0.5);
+        } catch { /* ignore */ }
         return;
       }
       // 3 pulses over 3s: peaks at 15%, 45%, 75% of duration
