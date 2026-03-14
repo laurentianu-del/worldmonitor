@@ -496,8 +496,10 @@ export class SearchManager implements AppModule {
     const panel = document.querySelector(`[data-panel="${panelId}"]`);
     if (panel) {
       panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      panel.classList.add('flash-highlight');
-      setTimeout(() => panel.classList.remove('flash-highlight'), 1500);
+      panel.classList.remove('search-highlight');
+      void (panel as HTMLElement).offsetWidth;
+      panel.classList.add('search-highlight');
+      setTimeout(() => panel.classList.remove('search-highlight'), 3100);
     }
   }
 
@@ -506,8 +508,10 @@ export class SearchManager implements AppModule {
       const item = document.querySelector(`[data-news-id="${CSS.escape(itemId)}"]`);
       if (item) {
         item.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        item.classList.add('flash-highlight');
-        setTimeout(() => item.classList.remove('flash-highlight'), 1500);
+        item.classList.remove('search-highlight');
+        void (item as HTMLElement).offsetWidth;
+        item.classList.add('search-highlight');
+        setTimeout(() => item.classList.remove('search-highlight'), 3100);
       }
     }, 100);
   }

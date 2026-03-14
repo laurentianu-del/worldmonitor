@@ -179,8 +179,10 @@ export class BreakingNewsBanner {
     const panel = document.querySelector(`[data-panel="${panelId}"]`);
     if (!panel) return;
     panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    panel.classList.add('flash-highlight');
-    setTimeout(() => panel.classList.remove('flash-highlight'), 1500);
+    panel.classList.remove('search-highlight');
+    void (panel as HTMLElement).offsetWidth;
+    panel.classList.add('search-highlight');
+    setTimeout(() => panel.classList.remove('search-highlight'), 3100);
   }
 
   private createAlertElement(alert: BreakingAlert): HTMLElement {

@@ -5342,6 +5342,8 @@ export class DeckGLMap {
     });
   }
 
+  private countryPulseRaf: number | null = null;
+
   public highlightCountry(code: string): void {
     this.highlightedCountryCode = code;
     if (!this.maplibreMap || !this.countryGeoJsonLoaded) return;
@@ -5350,16 +5352,46 @@ export class DeckGLMap {
       this.maplibreMap.setFilter('country-highlight-fill', filter);
       this.maplibreMap.setFilter('country-highlight-border', filter);
     } catch { /* layer not ready yet */ }
+    this.pulseCountryHighlight();
   }
 
   public clearCountryHighlight(): void {
     this.highlightedCountryCode = null;
+    if (this.countryPulseRaf) { cancelAnimationFrame(this.countryPulseRaf); this.countryPulseRaf = null; }
     if (!this.maplibreMap) return;
     const noMatch = ['==', ['get', 'ISO3166-1-Alpha-2'], ''] as maplibregl.FilterSpecification;
     try {
       this.maplibreMap.setFilter('country-highlight-fill', noMatch);
       this.maplibreMap.setFilter('country-highlight-border', noMatch);
+      this.maplibreMap.setPaintProperty('country-highlight-fill', 'fill-opacity', 0.12);
+      this.maplibreMap.setPaintProperty('country-highlight-border', 'line-opacity', 0.5);
     } catch { /* layer not ready */ }
+  }
+
+  private pulseCountryHighlight(): void {
+    if (this.countryPulseRaf) { cancelAnimationFrame(this.countryPulseRaf); this.countryPulseRaf = null; }
+    const map = this.maplibreMap;
+    if (!map) return;
+    const start = performance.now();
+    const duration = 3000;
+    const step = (now: number) => {
+      const t = (now - start) / duration;
+      if (t >= 1) {
+        this.countryPulseRaf = null;
+        return;
+      }
+      // 3 pulses over 3s: peaks at 15%, 45%, 75% of duration
+      const pulse = Math.sin(t * Math.PI * 3) ** 2;
+      const fade = 1 - t * t;
+      const fillOp = 0.08 + 0.25 * pulse * fade;
+      const borderOp = 0.3 + 0.7 * pulse * fade;
+      try {
+        map.setPaintProperty('country-highlight-fill', 'fill-opacity', fillOp);
+        map.setPaintProperty('country-highlight-border', 'line-opacity', borderOp);
+      } catch { /* ignore */ }
+      this.countryPulseRaf = requestAnimationFrame(step);
+    };
+    this.countryPulseRaf = requestAnimationFrame(step);
   }
 
   private switchBasemap(): void {
