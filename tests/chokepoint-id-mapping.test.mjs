@@ -22,9 +22,14 @@ describe('CANONICAL_CHOKEPOINTS registry', () => {
     assert.equal(new Set(names).size, names.length);
   });
 
-  it('has no duplicate portwatch names', () => {
-    const names = CANONICAL_CHOKEPOINTS.map(c => c.portwatchName);
+  it('has no duplicate portwatch names (excluding empty)', () => {
+    const names = CANONICAL_CHOKEPOINTS.map(c => c.portwatchName).filter(n => n);
     assert.equal(new Set(names).size, names.length);
+  });
+
+  it('Dardanelles has empty portwatchName (not in PortWatch dataset)', () => {
+    const dar = CANONICAL_CHOKEPOINTS.find(c => c.id === 'dardanelles');
+    assert.equal(dar.portwatchName, '');
   });
 });
 
@@ -43,10 +48,24 @@ describe('portwatchNameToId', () => {
     assert.equal(portwatchNameToId('Suez Canal'), 'suez');
   });
 
+  it('maps actual PortWatch feed names correctly', () => {
+    assert.equal(portwatchNameToId('Malacca Strait'), 'malacca_strait');
+    assert.equal(portwatchNameToId('Bab el-Mandeb Strait'), 'bab_el_mandeb');
+    assert.equal(portwatchNameToId('Gibraltar Strait'), 'gibraltar');
+    assert.equal(portwatchNameToId('Bosporus Strait'), 'bosphorus');
+    assert.equal(portwatchNameToId('Korea Strait'), 'korea_strait');
+    assert.equal(portwatchNameToId('Dover Strait'), 'dover_strait');
+    assert.equal(portwatchNameToId('Kerch Strait'), 'kerch_strait');
+    assert.equal(portwatchNameToId('Lombok Strait'), 'lombok_strait');
+  });
+
+  it('returns undefined for empty string', () => {
+    assert.equal(portwatchNameToId(''), undefined);
+  });
+
   it('is case-insensitive', () => {
     assert.equal(portwatchNameToId('suez canal'), 'suez');
-    assert.equal(portwatchNameToId('SUEZ CANAL'), 'suez');
-    assert.equal(portwatchNameToId('SuEz CaNaL'), 'suez');
+    assert.equal(portwatchNameToId('MALACCA STRAIT'), 'malacca_strait');
   });
 });
 
