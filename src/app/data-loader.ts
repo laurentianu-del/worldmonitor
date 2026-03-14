@@ -2654,7 +2654,6 @@ export class DataLoaderManager implements AppModule {
       console.error('[App] Telegram intel fetch failed:', error);
       this.callPanel('telegram-intel', 'setData', {
         source: 'telegram', enabled: false, count: 0, updatedAt: null, items: [],
-        error: 'Relay unavailable',
       });
     }
   }
