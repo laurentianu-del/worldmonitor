@@ -26,7 +26,6 @@ async function probe(url: string): Promise<boolean> {
       method: 'GET',
       signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
     });
-    // Any HTTP response means the server is reachable
     return true;
   } catch {
     return false;
