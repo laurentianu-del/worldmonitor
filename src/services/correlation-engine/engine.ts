@@ -1,4 +1,4 @@
-import type { AppContext } from '@/app/app-context';
+import type { AppContext } from '@/types';
 import type {
   DomainAdapter,
   SignalEvidence,
@@ -97,7 +97,6 @@ export class CorrelationEngine {
         return this.clusterByCountry(signals);
       case 'entity':
         return this.clusterByEntity(signals);
-      case 'geographic':
       default:
         return this.clusterByProximity(signals, adapter.spatialRadius);
     }

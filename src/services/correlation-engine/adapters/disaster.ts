@@ -1,4 +1,4 @@
-import type { AppContext } from '@/app/app-context';
+import type { AppContext } from '@/types';
 import type { DomainAdapter, SignalEvidence } from '../types';
 
 // v1 weights: wildfire and cable_alert deferred — renormalized to sum to 1.0.

@@ -1,6 +1,6 @@
 // Core types for the correlation engine
 
-import type { AppContext } from '@/app/app-context';
+import type { AppContext } from '@/types';
 
 export type CorrelationDomain = 'military' | 'escalation' | 'economic' | 'disaster';
 export type TrendDirection = 'escalating' | 'stable' | 'de-escalating';

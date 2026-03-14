@@ -1,16 +1,5 @@
-export type ThreatLevel = 'critical' | 'high' | 'medium' | 'low' | 'info';
-
-export type EventCategory =
-  | 'conflict' | 'protest' | 'disaster' | 'diplomatic' | 'economic'
-  | 'terrorism' | 'cyber' | 'health' | 'environmental' | 'military'
-  | 'crime' | 'infrastructure' | 'tech' | 'general';
-
-export interface ThreatClassification {
-  level: ThreatLevel;
-  category: EventCategory;
-  confidence: number;
-  source: 'keyword' | 'ml' | 'llm';
-}
+import type { ThreatLevel, EventCategory, ThreatClassification } from '@/types';
+export type { ThreatLevel, EventCategory, ThreatClassification };
 
 import { getCSSColor } from '@/utils';
 import { getRpcBaseUrl } from '@/services/rpc-client';
@@ -474,7 +463,7 @@ function flushBatch(): void {
               delay = 120_000;
             } else if (err.statusCode === 429) {
               consecutive429s++;
-              delay = Math.min(BASE_PAUSE_MS * Math.pow(2, consecutive429s - 1), MAX_PAUSE_MS);
+              delay = Math.min(BASE_PAUSE_MS * 2 ** (consecutive429s - 1), MAX_PAUSE_MS);
             } else {
               delay = 30_000;
             }

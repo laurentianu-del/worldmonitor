@@ -1,15 +1,5 @@
-export type PortType = 'container' | 'oil' | 'lng' | 'naval' | 'mixed' | 'bulk';
-
-export interface Port {
-  id: string;
-  name: string;
-  lat: number;
-  lon: number;
-  country: string;
-  type: PortType;
-  rank?: number;
-  note: string;
-}
+import type { Port, PortType } from '@/types';
+export type { Port, PortType };
 
 export const PORTS: Port[] = [
   // Top Container Ports

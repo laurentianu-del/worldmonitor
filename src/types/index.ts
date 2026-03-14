@@ -1,3 +1,98 @@
+export type DataSourceId =
+  | 'acled'
+  | 'opensky'
+  | 'wingbits'
+  | 'ais'
+  | 'usgs'
+  | 'gdelt'
+  | 'gdelt_doc'
+  | 'rss'
+  | 'polymarket'
+  | 'predictions'
+  | 'pizzint'
+  | 'outages'
+  | 'cyber_threats'
+  | 'weather'
+  | 'economic'
+  | 'oil'
+  | 'spending'
+  | 'firms'
+  | 'acled_conflict'
+  | 'ucdp'
+  | 'hapi'
+  | 'ucdp_events'
+  | 'unhcr'
+  | 'climate'
+  | 'worldpop'
+  | 'giving'
+  | 'bis'
+  | 'wto_trade'
+  | 'supply_chain'
+  | 'security_advisories'
+  | 'gpsjam';
+
+export interface AppContext {
+  map: import('@/components').MapContainer | null;
+  readonly isMobile: boolean;
+  readonly isDesktopApp: boolean;
+  readonly container: HTMLElement;
+
+  panels: Record<string, import('@/components').Panel>;
+  newsPanels: Record<string, import('@/components').NewsPanel>;
+  panelSettings: Record<string, PanelConfig>;
+
+  mapLayers: MapLayers;
+
+  allNews: NewsItem[];
+  newsByCategory: Record<string, NewsItem[]>;
+  latestMarkets: MarketData[];
+  latestPredictions: import('@/services/prediction').PredictionMarket[];
+  latestClusters: ClusteredEvent[];
+  intelligenceCache: import('@/app/app-context').IntelligenceCache;
+  cyberThreatsCache: CyberThreat[] | null;
+
+  disabledSources: Set<string>;
+  currentTimeRange: import('@/components').TimeRange;
+
+  inFlight: Set<string>;
+  seenGeoAlerts: Set<string>;
+  monitors: Monitor[];
+
+  signalModal: import('@/components').SignalModal | null;
+  statusPanel: import('@/components').StatusPanel | null;
+  searchModal: import('@/components').SearchModal | null;
+  findingsBadge: import('@/components').IntelligenceGapBadge | null;
+  breakingBanner: import('@/components/BreakingNewsBanner').BreakingNewsBanner | null;
+  playbackControl: import('@/components').PlaybackControl | null;
+  exportPanel: import('@/utils').ExportPanel | null;
+  unifiedSettings: import('@/components/UnifiedSettings').UnifiedSettings | null;
+  pizzintIndicator: import('@/components').PizzIntIndicator | null;
+  correlationEngine: import('@/services/correlation-engine').CorrelationEngine | null;
+  llmStatusIndicator: import('@/components').LlmStatusIndicator | null;
+  countryBriefPage: import('@/components/CountryBriefPanel').CountryBriefPanel | null;
+  countryTimeline: import('@/components/CountryTimeline').CountryTimeline | null;
+
+  positivePanel: import('@/components/PositiveNewsFeedPanel').PositiveNewsFeedPanel | null;
+  countersPanel: import('@/components/CountersPanel').CountersPanel | null;
+  progressPanel: import('@/components/ProgressChartsPanel').ProgressChartsPanel | null;
+  breakthroughsPanel: import('@/components/BreakthroughsTickerPanel').BreakthroughsTickerPanel | null;
+  heroPanel: import('@/components/HeroSpotlightPanel').HeroSpotlightPanel | null;
+  digestPanel: import('@/components/GoodThingsDigestPanel').GoodThingsDigestPanel | null;
+  speciesPanel: import('@/components/SpeciesComebackPanel').SpeciesComebackPanel | null;
+  renewablePanel: import('@/components/RenewableEnergyPanel').RenewableEnergyPanel | null;
+  tvMode: import('@/services/tv-mode').TvModeController | null;
+  happyAllItems: NewsItem[];
+  isDestroyed: boolean;
+  isPlaybackMode: boolean;
+  isIdle: boolean;
+  initialLoadComplete: boolean;
+  resolvedLocation: 'global' | 'america' | 'mena' | 'eu' | 'asia' | 'latam' | 'africa' | 'oceania';
+
+  initialUrlState: import('@/utils').ParsedMapUrlState | null;
+  readonly PANEL_ORDER_KEY: string;
+  readonly PANEL_SPANS_KEY: string;
+}
+
 export interface DeductContextDetail {
   query?: string;
   geoContext: string;
@@ -16,7 +111,19 @@ export interface Feed {
   lang?: string;             // ISO 2-letter code for filtering
 }
 
-export type { ThreatClassification, ThreatLevel, EventCategory } from '@/services/threat-classifier';
+export type ThreatLevel = 'critical' | 'high' | 'medium' | 'low' | 'info';
+
+export type EventCategory =
+  | 'conflict' | 'protest' | 'disaster' | 'diplomatic' | 'economic'
+  | 'terrorism' | 'cyber' | 'health' | 'environmental' | 'military'
+  | 'crime' | 'infrastructure' | 'tech' | 'general';
+
+export interface ThreatClassification {
+  level: ThreatLevel;
+  category: EventCategory;
+  confidence: number;
+  source: 'keyword' | 'ml' | 'llm';
+}
 
 export interface NewsItem {
   source: string;
@@ -26,7 +133,7 @@ export interface NewsItem {
   isAlert: boolean;
   monitorColor?: string;
   tier?: number;
-  threat?: import('@/services/threat-classifier').ThreatClassification;
+  threat?: ThreatClassification;
   lat?: number;
   lon?: number;
   locationName?: string;
@@ -62,7 +169,7 @@ export interface ClusteredEvent {
   isAlert: boolean;
   monitorColor?: string;
   velocity?: VelocityMetrics;
-  threat?: import('@/services/threat-classifier').ThreatClassification;
+  threat?: ThreatClassification;
   lat?: number;
   lon?: number;
   lang?: string;
@@ -1070,8 +1177,18 @@ export interface CascadeResult {
   }[];
 }
 
-// Re-export port types
-export type { Port, PortType } from '@/config/ports';
+export type PortType = 'container' | 'oil' | 'lng' | 'naval' | 'mixed' | 'bulk';
+
+export interface Port {
+  id: string;
+  name: string;
+  lat: number;
+  lon: number;
+  country: string;
+  type: PortType;
+  rank?: number;
+  note: string;
+}
 
 // AI Regulation Types
 export type RegulationType = 'comprehensive' | 'sectoral' | 'voluntary' | 'proposed';
@@ -1355,4 +1472,28 @@ export interface MapDatacenterCluster {
   existingCount?: number;
   plannedCount?: number;
   sampled?: boolean;
+}
+
+export interface CountryBriefSignals {
+  criticalNews: number;
+  protests: number;
+  militaryFlights: number;
+  militaryVessels: number;
+  outages: number;
+  aisDisruptions: number;
+  satelliteFires: number;
+  temporalAnomalies: number;
+  cyberThreats: number;
+  earthquakes: number;
+  displacementOutflow: number;
+  climateStress: number;
+  conflictEvents: number;
+  activeStrikes: number;
+  orefSirens: number;
+  orefHistory24h: number;
+  aviationDisruptions: number;
+  travelAdvisories: number;
+  travelAdvisoryMaxLevel: string | null;
+  gpsJammingHexes: number;
+  isTier1: boolean;
 }

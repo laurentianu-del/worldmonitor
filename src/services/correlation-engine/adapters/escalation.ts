@@ -1,4 +1,4 @@
-import type { AppContext } from '@/app/app-context';
+import type { AppContext } from '@/types';
 import type { DomainAdapter, SignalEvidence } from '../types';
 import { matchCountryNamesInText, getCountryAtCoordinates, nameToCountryCode, getCountryNameByCode, iso3ToIso2Code } from '@/services/country-geometry';
 

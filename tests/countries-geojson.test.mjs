@@ -1,11 +1,11 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
-import { resolve, dirname } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const geojson = JSON.parse(readFileSync(resolve(__dirname, '../public/data/countries.geojson'), 'utf-8'));
+const COUNTRY_GEOJSON_URL = 'https://maps.worldmonitor.app/countries.geojson';
+
+const response = await fetch(COUNTRY_GEOJSON_URL);
+if (!response.ok) throw new Error(`Failed to fetch countries.geojson: HTTP ${response.status}`);
+const geojson = await response.json();
 const features = geojson.features;
 
 describe('countries.geojson data integrity', () => {

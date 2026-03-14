@@ -1,4 +1,4 @@
-import type { AppContext } from '@/app/app-context';
+import type { AppContext } from '@/types';
 import type { DomainAdapter, SignalEvidence } from '../types';
 
 // v1 weights: only military_flight, ais_gap, military_vessel collected.
